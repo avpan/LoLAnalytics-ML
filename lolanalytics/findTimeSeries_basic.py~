@@ -1,0 +1,129 @@
+import numpy as np
+import os.path
+from datetime import date, timedelta
+import json
+import pandas as pd
+import time
+
+#checks for whether or not the game is a good match to analyze
+#it checks to see if the game has 10 players (no afks)
+#it checks if the game is a rank game
+def checkGame(matchNum):
+    
+    teamRed, teamBlue = False,False #blue = teamid 100 and red is 200
+    #open match json file
+    f = open("./data/real_data/match_%d.json"%matchNum,"r")
+    data = json.load(f)
+    
+    if data['queueType'] != 'TEAM_BUILDER_DRAFT_RANKED_5x5':
+        game = False
+    else:
+        partic_df = pd.DataFrame(data['participants'])
+        
+        #check if game has 10 players
+        if partic_df['participantId'].count() == 10:
+            game = True
+        else:
+            game = False
+
+        for item in data:
+            if item == 'timeline' and game == False:
+                game = True
+                break
+            else:
+                game = False
+                
+        #due to new remake policy games that end before 5min are due to this
+        game_length = data['matchDuration']/60.0 
+        if game_length > 5.0 and game == False:
+            game = True
+        else:
+            game = False
+    return game
+
+def main(matchNum):
+    f = open("./data/real_data/match_%d.json"%matchNum,"r")
+    data = json.load(f)
+
+    player_info = []
+    for item in data['participantIdentities']:
+        playerid = int(item['participantId'])
+        name = item['player']['summonerName']
+        player_info.append((id,name))
+
+    df1 = pd.DataFrame(data['participants'])
+    df2 = pd.DataFrame(data['teams'])
+    
+    #determine basic stats of winning team
+    victory_team = None
+    defeat_team = None
+    for i in range(2):
+        df = df2.iloc[i]
+        if df['winner']:
+            victory_team = df2.iloc[[i]]
+        else:
+            defeat_team = df2.iloc[[i]]
+            
+    #separate winners and losers
+    winners, losers = [],[]
+    for i in range(10):
+        df = df1.iloc[i]
+        item = df['stats']
+        playerId = df['participantId']
+        rank = df['highestAchievedSeasonTier'] 
+        if item['winner']:
+            item['ID'] = playerId
+            item['rank'] = rank
+            winners.append(item)
+        else:
+            item['ID'] = playerId
+            item['rank'] = rank
+            losers.append(item)
+            
+
+    #print winners
+    
+    timeseries = []
+    df3 = pd.DataFrame(data['timeline']['frames'])
+    length = df3.shape[0]
+    for i in range(length):
+        df = df3.iloc[i]
+        time = df['timestamp']/1000/60
+        wgold = 0
+        for item in winners:
+            ID = str(item['ID'])
+            wgold += df['participantFrames'][ID]['totalGold']
+            #cs = df['participantFrames'][ID]['minionsKilled']
+            #jngcs = df['participantFrames'][ID]['jungleMinionsKilled']
+            #wcreep_score += (cs + jngcs)
+        lgold  = 0
+        for item in losers:
+            ID = str(item['ID'])
+            lgold += df['participantFrames'][ID]['totalGold']
+            #cs = df['participantFrames'][ID]['minionsKilled']
+            #jngcs = df['participantFrames'][ID]['jungleMinionsKilled']
+            #lcreep_score += (cs + jngcs)
+        goldDiff = wgold-lgold
+        timeseries.append((matchNum, time,wgold,lgold,goldDiff))
+        
+    match_df = pd.DataFrame(timeseries,columns=['matchId','time','vicGoldTotal','defGoldTotal','goldDiff'])
+    #match_df.reset_index(inplace=True,drop=True)
+    #write to file
+    if matchNum == 1:
+        with open("./data/test_data/prelim_timedata.csv",'wb') as f:
+            match_df.to_csv(f,header=True)
+    else:
+        with open("./data/test_data/prelim_timedata.csv",'a') as f:
+            match_df.to_csv(f,header=False)
+    
+        
+if __name__ == "__main__":
+    N_matches = int(raw_input("How many matches to convert?"))
+    for n in range(N_matches+1):
+        filepath = "./data/real_data/match_%d.json" % n
+        if os.path.isfile(filepath):
+            #print n
+            if checkGame(n):
+                main(n)
+            else:
+                continue

@@ -1,0 +1,21 @@
+Script Notes
+
+mongoexport -d 'databasename' -c 'collectionname' -o 'output name ex .json'
+
+Run parsejson.py to separate large json file into multiple match files 
+-stores files into a folder in data/bigdata
+Run convert_csv.py and convert_csv_loser.py
+-stores files into respective data folders 
+endstats_winner/loser for rank, lane, kills, deaths, assists, total cs, total gold
+timeline_winner/loser for time, gold@time, cs@time
+csv_winner/loser for time, avgGold@time, avgCs@time
+
+for analysis for every winner and loser regardless of lane
+Run python resetfinaldatacsv.py to clear it and reset
+Run python calculate_avg_allwinner/loser
+Run python plotTimeSeries_All.py 
+
+for analysis for every winner and loser with respect to their lanes
+Run python resetfinaldatacsv.py to clear it and reset
+Run python calculate_avg_laneswinner/loser
+Run python plotTimeSeries_Lanes.py 

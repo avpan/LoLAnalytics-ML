@@ -1,0 +1,42 @@
+import json
+import csv
+import os.path
+
+def main(matchNum):
+	league_entry = open("./data/leaguedata/entry_%d.json"%matchNum,"r")
+	try:
+		entry_data = json.load(league_entry)
+		sum_id = str(entry_data['_id'])
+		data = entry_data[sum_id][0]
+		header = []
+		body =[]
+		for key in data:
+			if isinstance(data[key],unicode):
+				header.append(key)
+				body.append(data[key])
+			else:
+				for item,value in data[key][0].items():
+					header.append(item)
+					body.append(value)
+					
+		
+		with open('./data/league_entry_csvdata/entry_%d.csv'%matchNum,'wb')  as csvfile:
+			csvwriter = csv.writer(csvfile, delimiter=',',quotechar='"',quoting=csv.QUOTE_ALL)
+			csvwriter.writerow(header)
+			csvwriter.writerow(body)
+			
+	except: 
+		print matchNum
+		
+	
+		
+	
+	
+		
+		
+if __name__=="__main__":
+	N_matches = int(raw_input('How many matches to convert?'))
+	for n in range(1,N_matches+1):
+		filepath = './data/leaguedata/entry_%d.json' % n
+		if os.path.isfile(filepath):
+			main(n)
